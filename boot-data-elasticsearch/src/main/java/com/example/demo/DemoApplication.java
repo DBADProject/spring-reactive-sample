@@ -12,6 +12,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
+import org.springframework.data.elasticsearch.annotations.Query;
 import org.springframework.data.elasticsearch.repository.ReactiveElasticsearchRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
@@ -45,9 +46,9 @@ class DataInitializer implements CommandLineRunner {
                 .deleteAll()
                 .thenMany(
                         Flux
-                                .just("Post one", "Post two")
+                                .just("post1", "post2")
                                 .flatMap(
-                                        title -> this.posts.save(Post.builder().title(title).content("content of " + title).build())
+                                        title -> this.posts.save(Post.builder().title(title).content("content of " + Math.random()).build())
                                 )
                 )
                 .log()
@@ -56,9 +57,7 @@ class DataInitializer implements CommandLineRunner {
                         null,
                         () -> log.info("done initialization...")
                 );
-
     }
-
 }
 
 @RestController()
@@ -86,6 +85,21 @@ class PostController {
         return this.posts.findById(id);
     }
 
+    @GetMapping("/search/title/{term}")
+    public Flux<Post> searchTitle(@PathVariable("term") String term) {
+        return this.posts.findByTitle(term);
+    }
+
+    @GetMapping("/search/content/{term}")
+    public Flux<Post> searchContent(@PathVariable("term") String term) {
+        return this.posts.findByContent(term);
+    }
+
+    @GetMapping("/search/{term}")
+    public Flux<Post> search(@PathVariable("term") String term) {
+        return this.posts.findByQuery(term);
+    }
+
     @PutMapping("/{id}")
     public Mono<Post> update(@PathVariable("id") String id, @RequestBody Post post) {
         return this.posts.findById(id)
@@ -105,7 +119,42 @@ class PostController {
 
 }
 
+// https://developpaper.com/spring-boot-integrates-elasticsearch/
+// https://reflectoring.io/spring-boot-elasticsearch/
+// https://hantsy.github.io/spring-reactive-sample/data/data-elasticsearch.html
+
+// https://coralogix.com/blog/42-elasticsearch-query-examples-hands-on-tutorial/
 interface PostRepository extends ReactiveElasticsearchRepository<Post, String> {
+    @Query("""
+            {
+                "match": {
+                    "title": {
+                        "query": "?0"
+                    }
+                }
+            }
+            """)
+    Flux<Post> findByTitle(String title);
+
+    @Query("""
+            {
+                "match": {
+                    "content": {
+                        "query": "?0"
+                    }
+                }
+            }
+            """)
+    Flux<Post> findByContent(String content);
+
+    @Query("""
+            {
+                "multi_match": {
+                    "query": "?0"
+                }
+            }
+            """)
+    Flux<Post> findByQuery(String query);
 }
 
 @Document(indexName = "posts")
