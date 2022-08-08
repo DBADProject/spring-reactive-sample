@@ -119,6 +119,8 @@ class PostController {
 
 }
 
+// docker run -p 9200:9200   -e "discovery.type=single-node"   docker.elastic.co/elasticsearch/elasticsearch:7.10.0   -a "elastic_search"
+
 // https://developpaper.com/spring-boot-integrates-elasticsearch/
 // https://reflectoring.io/spring-boot-elasticsearch/
 // https://hantsy.github.io/spring-reactive-sample/data/data-elasticsearch.html
